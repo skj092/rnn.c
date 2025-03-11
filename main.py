@@ -149,7 +149,7 @@ if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else "cpu"
     alldata = NamesDataset("data/names")
     print(f"loaded {len(alldata)} items of data")
-    print(f"example = {alldata[0]}")
+    # print(f"example = {alldata[0]}")
 
     train_set, test_set = torch.utils.data.random_split(
         alldata, [.85, .15], generator=torch.Generator(device=device).manual_seed(2024))
@@ -158,6 +158,7 @@ if __name__ == "__main__":
         f"train examples = {len(train_set)}, validation examples = {len(test_set)}")
     n_hidden = 128
     rnn = CharRNN(n_letters, n_hidden, len(alldata.labels_uniq))
+    breakpoint()
     # print(rnn)
     # input = lineToTensor('Albert')
     # this is equivalent to ``output = rnn.forward(input)``

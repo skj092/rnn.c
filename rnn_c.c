@@ -5,7 +5,6 @@
 #include <string.h>
 
 // Load tensor without shape file
-// Load tensor without shape file (we'll provide the shape directly)
 float* load_tensor(const char* bin_path, int* total_size) {
     FILE* bin_file = fopen(bin_path, "rb");
     if (!bin_file) {
@@ -39,7 +38,7 @@ float* load_tensor(const char* bin_path, int* total_size) {
 
 // poor man's tensor checker
 int check_tensor(float *a, float *b, int n, const char *label) {
-  int print_upto = 4;
+  int print_upto = 40;
   int ok = 1;
   float maxdiff = 0.0f;
   float tol = 2e-2f;
@@ -88,7 +87,7 @@ void print_float_array(float *array, size_t size) {
 }
 
 
-// Matrix multiplication: C = A * B
+// Matrix multiplication: C = A * B -> (m, k) x (k, n) -> (m, n)
 void matrix_multiply(float *A, float *B, float *C, int m, int k, int n) {
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -136,10 +135,10 @@ typedef struct {
     float *weight_ih_t;
     float *weight_hh_t;
     RNN_Conf config;
-} RNN_Model;
+} RNN_Cell;
 
 // Load pretrained weights
-void load_pretrained_weight(RNN_Model *rnn) {
+void load_pretrained_weight(RNN_Cell *rnn) {
     int total_size;
     rnn->weight_ih = load_tensor("rnn_data/weight_ih_l0", &total_size);
     rnn->weight_hh = load_tensor("rnn_data/weight_hh_l0", &total_size);
@@ -159,68 +158,65 @@ void transpose_matrix(float *src, float *dst, int rows, int cols) {
 }
 
 
-void rnn_forward(RNN_Model *model, float *output, float *final_h, float *input, int batch_size, int seq_len) {
-    int input_size = model->config.input_size;
-    int hidden_size = model->config.hidden_size;
+void rnn_forward(RNN_Cell *model, float *output, float *final_h, float *input,
+                 int batch_size, int seq_len) {
+  int input_size = model->config.input_size;
+  int hidden_size = model->config.hidden_size;
 
-    float *h_t = (float *)calloc(batch_size * hidden_size, sizeof(float));
-    float *temp1 = (float *)malloc(batch_size * hidden_size * sizeof(float));
-    float *temp2 = (float *)malloc(batch_size * hidden_size * sizeof(float));
-    float *temp3 = (float *)malloc(batch_size * hidden_size * sizeof(float));
-    float *x_t = (float *)malloc(batch_size * input_size * sizeof(float));
+  float *h_t = (float *)calloc(batch_size * hidden_size, sizeof(float));
+  float *temp1 = (float *)malloc(batch_size * hidden_size * sizeof(float));
+  float *temp2 = (float *)malloc(batch_size * hidden_size * sizeof(float));
+  float *temp3 = (float *)malloc(batch_size * hidden_size * sizeof(float));
+  float *x_t = (float *)malloc(batch_size * input_size * sizeof(float));
 
-    // Allocate space for transposed weights
-    float *weight_ih_T = (float *)malloc(input_size * hidden_size * sizeof(float));
-    float *weight_hh_T = (float *)malloc(hidden_size * hidden_size * sizeof(float));
+  float *weight_ih_T =
+      (float *)malloc(input_size * hidden_size * sizeof(float));
+  float *weight_hh_T =
+      (float *)malloc(hidden_size * hidden_size * sizeof(float));
 
-    // Transpose weights
-    transpose_matrix(model->weight_ih, weight_ih_T, hidden_size, input_size);
-    transpose_matrix(model->weight_hh, weight_hh_T, hidden_size, hidden_size);
+  transpose_matrix(model->weight_ih, weight_ih_T, hidden_size, input_size);
+  transpose_matrix(model->weight_hh, weight_hh_T, hidden_size, hidden_size);
 
-    for (int t = 0; t < 1; t++) {
-        // Extract x[:, t, :]
-        for (int b = 0; b < batch_size; b++) {
-            memcpy(&x_t[b * input_size], &input[b * (seq_len * input_size) + t * input_size], input_size * sizeof(float));
-        }
+  memcpy(x_t, input, batch_size * input_size * sizeof(float));
 
-        // print_float_array(x_t, batch_size * input_size);  // Debug output
+  matrix_multiply(x_t, weight_ih_T, temp1, batch_size, input_size, hidden_size);
+  matrix_multiply(h_t, weight_hh_T, temp2, batch_size, hidden_size,
+                  hidden_size);
+  vector_add(temp1, temp2, temp3, batch_size * hidden_size);
 
-        // Matrix multiplications using transposed weights
-        matrix_multiply(x_t, weight_ih_T, temp1, batch_size, input_size, hidden_size);
-        matrix_multiply(h_t, weight_hh_T, temp2, batch_size, hidden_size, hidden_size);
-
-        // Compute activations
-        vector_add(temp1, temp2, temp3, batch_size * hidden_size);
-        vector_add(temp3, model->bias_ih, temp3, batch_size * hidden_size);
-        vector_add(temp3, model->bias_hh, temp3, batch_size * hidden_size);
-        apply_tanh(temp3, h_t, batch_size * hidden_size);
-
-        // Store the output
-        memcpy(&output[t * batch_size * hidden_size], h_t, batch_size * hidden_size * sizeof(float));
+  // Add biases correctly for each batch
+  for (int b = 0; b < batch_size; b++) {
+    for (int i = 0; i < hidden_size; i++) {
+      temp3[b * hidden_size + i] += model->bias_ih[i] + model->bias_hh[i];
     }
+  }
 
-    memcpy(final_h, h_t, batch_size * hidden_size * sizeof(float));
+  apply_tanh(temp3, h_t, batch_size * hidden_size);
 
-    free(h_t);
-    free(temp1);
-    free(temp2);
-    free(temp3);
-    free(x_t);
-    free(weight_ih_T);
-    free(weight_hh_T);
+  memcpy(output, h_t, batch_size * hidden_size * sizeof(float));
+  memcpy(final_h, h_t, batch_size * hidden_size * sizeof(float));
+
+  free(h_t);
+  free(temp1);
+  free(temp2);
+  free(temp3);
+  free(x_t);
+  free(weight_ih_T);
+  free(weight_hh_T);
 }
+
 
 
 
 int main() {
     RNN_Conf config = default_config();
-    RNN_Model rnn = {0};
+    RNN_Cell rnn = {0};
     rnn.config = config;
     load_pretrained_weight(&rnn);
 
-    int batch_size = 3, seq_len = 5;
-    int input_size = config.input_size;
-    int hidden_size = config.hidden_size;
+    int batch_size = 3, seq_len = 1;
+    int input_size = config.input_size; // 10
+    int hidden_size = config.hidden_size; // 20
 
     float *input = (float *)malloc(batch_size * seq_len * input_size * sizeof(float));
     float *output = (float *)malloc(batch_size * seq_len * hidden_size * sizeof(float));
@@ -230,13 +226,14 @@ int main() {
     // load pytorch input for verification
     int total_size;
     input = load_tensor("./rnn_data/input_data.npy", &total_size);
-    // print_float_array(input, 152);
+    // print_float_array(input, batch_size * seq_len * input_size);
     expected = load_tensor("./rnn_data/output.bin", &total_size);
 
 
     output = (float *)malloc(3 * 5 * 10 * sizeof(float));
     rnn_forward(&rnn, output, final_h, input, batch_size, seq_len);
-    check_tensor(output, expected, 150, "output");
+    // print_float_array(output, 40);
+    check_tensor(output, expected, batch_size * seq_len * hidden_size, "output");
 
     free(input);
     free(expected);

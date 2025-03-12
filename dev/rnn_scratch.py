@@ -78,6 +78,7 @@ def rnn_custom(x: Tensor, rnn_model: nn.RNN):
             # save_tensor_as_bin("rnn_data/temp2.bin", w_ih)
             # ih = torch.mm(layer_input, w_ih.t())
             # save_tensor_as_bin("rnn_data/ih.bin", ih)
+            breakpoint()
             a = torch.mm(layer_input, w_ih.t()) + b_ih + \
                 torch.mm(h_t[layer], w_hh.t()) + b_hh
             h_t[layer] = torch.tanh(a)
@@ -134,3 +135,4 @@ print("Outputs match:", torch.allclose(
     torch_output, custom_output, rtol=1e-4, atol=1e-4))
 print("Hidden states match:", torch.allclose(
     torch_hn, custom_hn, rtol=1e-4, atol=1e-4))
+breakpoint()

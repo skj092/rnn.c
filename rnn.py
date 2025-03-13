@@ -78,10 +78,11 @@ def rnn_custom(x: Tensor, rnn_model: nn.RNN):
             # save_tensor_as_bin("rnn_data/temp2.bin", w_ih)
             # ih = torch.mm(layer_input, w_ih.t())
             # save_tensor_as_bin("rnn_data/ih.bin", ih)
-            breakpoint()
             a = torch.mm(layer_input, w_ih.t()) + b_ih + \
                 torch.mm(h_t[layer], w_hh.t()) + b_hh
             h_t[layer] = torch.tanh(a)
+            breakpoint()
+            save_tensor_as_bin(f"rnn_data/act_{t}", torch.tanh(a))
 
             # Update input for next layer
             layer_input = h_t[layer]
@@ -99,7 +100,7 @@ input_size = 10
 hidden_size = 20
 num_layers = 1
 batch_size = 3  # This should match PyTorch's expectation
-seq_len = 1
+seq_len = 2
 
 # Create the model
 rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)

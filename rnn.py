@@ -81,7 +81,6 @@ def rnn_custom(x: Tensor, rnn_model: nn.RNN):
             a = torch.mm(layer_input, w_ih.t()) + b_ih + \
                 torch.mm(h_t[layer], w_hh.t()) + b_hh
             h_t[layer] = torch.tanh(a)
-            breakpoint()
             save_tensor_as_bin(f"rnn_data/act_{t}", torch.tanh(a))
 
             # Update input for next layer
@@ -98,9 +97,9 @@ set_seed(42)
 # Create test input with explicit dimensions
 input_size = 10
 hidden_size = 20
-num_layers = 1
+num_layers = 2
 batch_size = 3  # This should match PyTorch's expectation
-seq_len = 2
+seq_len = 5
 
 # Create the model
 rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
@@ -136,4 +135,3 @@ print("Outputs match:", torch.allclose(
     torch_output, custom_output, rtol=1e-4, atol=1e-4))
 print("Hidden states match:", torch.allclose(
     torch_hn, custom_hn, rtol=1e-4, atol=1e-4))
-breakpoint()

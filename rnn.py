@@ -104,6 +104,7 @@ seq_len = 5
 # Create the model
 rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
 
+
 # Create input tensor with correct shape
 # (batch_size, seq_len, feature)
 input = torch.randn(batch_size, seq_len, input_size)

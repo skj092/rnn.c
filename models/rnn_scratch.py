@@ -91,48 +91,49 @@ def rnn_custom(x: Tensor, rnn_model: nn.RNN):
 
     return outputs, h_t
 
+if __name__ == "__main__":
 
 # Test with PyTorch RNN - let's debug more carefully
-set_seed(42)
+    set_seed(42)
 # Create test input with explicit dimensions
-input_size = 10
-hidden_size = 20
-num_layers = 2
-batch_size = 3  # This should match PyTorch's expectation
-seq_len = 5
+    input_size = 10
+    hidden_size = 20
+    num_layers = 2
+    batch_size = 3  # This should match PyTorch's expectation
+    seq_len = 5
 
 # Create the model
-rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
+    rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True)
 
 
 # Create input tensor with correct shape
 # (batch_size, seq_len, feature)
-input = torch.randn(batch_size, seq_len, input_size)
+    input = torch.randn(batch_size, seq_len, input_size)
 
 # Get outputs from PyTorch RNN
-torch_output, torch_hn = rnn.forward(input)
+    torch_output, torch_hn = rnn.forward(input)
 
 # Create directory for weights and data
-os.makedirs("rnn_data", exist_ok=True)
+    os.makedirs("rnn_data", exist_ok=True)
 # Save input tensor
-save_tensor_as_bin("rnn_data/input_data.npy", input)
+    save_tensor_as_bin("rnn_data/input_data.npy", input)
 
 
 # Get outputs from custom RNN
-custom_output, custom_hn = rnn_custom(input, rnn)
+    custom_output, custom_hn = rnn_custom(input, rnn)
 
-save_tensor_as_bin("rnn_data/output.bin", custom_output)
-save_tensor_as_bin("rnn_data/hn.bin", custom_hn)
+    save_tensor_as_bin("rnn_data/output.bin", custom_output)
+    save_tensor_as_bin("rnn_data/hn.bin", custom_hn)
 
 # Print shapes for debugging
-print("Input shape:", input.shape)
-print("PyTorch hidden state shape:", torch_hn.shape)
-print("Custom hidden state shape:", custom_hn.shape)
+    print("Input shape:", input.shape)
+    print("PyTorch hidden state shape:", torch_hn.shape)
+    print("Custom hidden state shape:", custom_hn.shape)
 
 # Verify outputs match
-print("PyTorch output shape:", torch_output.shape)
-print("Custom output shape:", custom_output.shape)
-print("Outputs match:", torch.allclose(
-    torch_output, custom_output, rtol=1e-4, atol=1e-4))
-print("Hidden states match:", torch.allclose(
-    torch_hn, custom_hn, rtol=1e-4, atol=1e-4))
+    print("PyTorch output shape:", torch_output.shape)
+    print("Custom output shape:", custom_output.shape)
+    print("Outputs match:", torch.allclose(
+        torch_output, custom_output, rtol=1e-4, atol=1e-4))
+    print("Hidden states match:", torch.allclose(
+        torch_hn, custom_hn, rtol=1e-4, atol=1e-4))

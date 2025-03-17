@@ -129,6 +129,7 @@ def train(rnn, training_data, n_epoch=10, n_batch_size=64, report_every=50, lear
             batch_loss = 0
             for i in batch:  # for each example in this batch
                 (label_tensor, text_tensor, label, text) = training_data[i]
+                breakpoint()
                 output = rnn.forward(text_tensor)
                 loss = criterion(output, label_tensor)
                 batch_loss += loss

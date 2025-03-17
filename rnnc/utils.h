@@ -7,7 +7,7 @@
 
 // poor man's tensor checker
 int check_tensor(float *a, float *b, int n, const char *label) {
-  int print_upto = 40;
+  int print_upto = 4;
   int ok = 1;
   float maxdiff = 0.0f;
   float tol = 2e-2f;
